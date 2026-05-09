@@ -1,8 +1,3 @@
-import os
-os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
-os.environ['TF_USE_LEGACY_KERAS'] = '1'
-
-
 import cv2
 import mediapipe as mp
 import csv
@@ -11,14 +6,17 @@ from mediapipe.python.solutions import hands as mp_hands
 from mediapipe.python.solutions import drawing_utils as mp_draw
 from model.fingerClassifier import KeyPointClassifier
 
+
+# Initializing MediaPipe - Hands
 hands = mp_hands.Hands(
-    static_image_mode =False,
-    max_num_hands = 1,
+    static_image_mode=False,
+    max_num_hands=2,
     min_detection_confidence=0.7,
     min_tracking_confidence=0.5,
 )
 mp_draw = mp.solutions.drawing_utils
 
+#processes landmark data to be relative to the wrist
 def pre_process_landmark(landmark_list):
     base_x, base_y = landmark_list[0][0], landmark_list[0][1]
     temp_landmark_list = []
@@ -29,11 +27,13 @@ def pre_process_landmark(landmark_list):
 
     return temp_landmark_list
 
+#data logger; appends cordinate data to a csv file with the corresponding label
 def logging_csv(label, landmark_list):
     with open('data/fingerCoords.csv', 'a', newline="") as f:
         writer = csv.writer(f)
         writer.writerow([label, *landmark_list])
 
+#function to overlay hand landmarks on the video feed
 def get_landmarks(frame):
     img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = hands.process(img_rgb)
