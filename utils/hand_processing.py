@@ -7,6 +7,7 @@ hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2)
 mp_draw = mp.solutions.drawing_utils
 
 #-------------------------------------------------------------------------------
+#hand cordinate normalization
 def pre_process_landmark(landmark_list):
     base_x, base_y = landmark_list[0][0], landmark_list[0][1]
     temp_landmark_list = []
@@ -18,7 +19,7 @@ def pre_process_landmark(landmark_list):
     return temp_landmark_list
 
 #data logger; appends cordinate data to a csv file with the corresponding label
-def logging_csv(label, landmark_list):
+def log_csv(label, landmark_list):
     with open('data/fingerCoords.csv', 'a', newline="") as f:
         writer = csv.writer(f)
         writer.writerow([label, *landmark_list])
