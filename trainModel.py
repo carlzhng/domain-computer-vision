@@ -1,12 +1,9 @@
-import os
-os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
-os.environ['TF_USE_LEGACY_KERAS'] = '1'
-
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
 import os
+import tf_keras
+from sklearn.model_selection import train_test_split
 
 # 1. Load Data
 print("Loading data from CSV...")
@@ -17,11 +14,12 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
 # 2. Build Model
 print("Building the neural network...")
-model = tf.keras.models.Sequential([
-    tf.keras.layers.Input(shape=(42,)),
-    tf.keras.layers.Dense(20, activation='relu'),
-    tf.keras.layers.Dense(10, activation='relu'),
-    tf.keras.layers.Dense(2, activation='softmax')
+# Use tf_keras to build so it's compatible with the converter later
+model = tf_keras.models.Sequential([
+    tf_keras.layers.Input(shape=(42,)),
+    tf_keras.layers.Dense(25, activation='relu'),
+    tf_keras.layers.Dense(15, activation='relu'),
+    tf_keras.layers.Dense(2, activation='softmax')
 ])
 
 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
@@ -34,9 +32,12 @@ model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=1)
 print("Exporting to TFLite...")
 os.makedirs('model', exist_ok=True)
 
-# Try saving the model to a file first, then converting the file
+# CHANGE 2: Save using tf_keras
 model.save('model/temp_model.h5')
-converter = tf.lite.TFLiteConverter.from_keras_model(tf.keras.models.load_model('model/temp_model.h5'))
+
+# CHANGE 3: Load using tf_keras for the converter
+loaded_model = tf_keras.models.load_model('model/temp_model.h5')
+converter = tf.lite.TFLiteConverter.from_keras_model(loaded_model)
 
 tflite_model = converter.convert()
 

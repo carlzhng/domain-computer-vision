@@ -5,3 +5,4 @@ tf-keras==2.16.0
 protobuf==4.25.3
 numpy>=1.23.5,<2.0.0
 pandas==2.2.2
+scikit-learn
