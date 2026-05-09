@@ -33,6 +33,13 @@ def main():
     keypoint_classifier = KeyPointClassifier()
     labels = ["Unlimited Void", "Neutral"]
     current_label = 0
+
+    #basic instructions
+    print("INSTRUCTIONS:")
+    print("Press 'q' to quit the program.")
+    print("Press 'n' to cycle forward through labels.")
+    print("Press 'b' to cycle backward through labels.")
+    print("Press 's' to save the current hand coordinates with the selected label.")
 #-------------------------------------------------------------------------------
     #main camera loop
     while True:
