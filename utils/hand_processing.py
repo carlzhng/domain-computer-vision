@@ -18,12 +18,14 @@ def pre_process_landmark(landmark_list):
 
     return temp_landmark_list
 
+#-------------------------------------------------------------------------------
 #data logger; appends cordinate data to a csv file with the corresponding label
-def log_csv(label, landmark_list):
-    with open('data/fingerCoords.csv', 'a', newline="") as f:
+def log_csv(label, landmark_list, filename):
+    with open(filename, 'a', newline="") as f:
         writer = csv.writer(f)
         writer.writerow([label, *landmark_list])
 
+#-------------------------------------------------------------------------------
 #function to overlay hand landmarks on the video feed
 def get_landmarks(frame):
     img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -40,3 +42,16 @@ def get_landmarks(frame):
             mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
     return all_hands_list, frame
+
+#-------------------------------------------------------------------------------
+#label list(s)
+labels = ["Unlimited Void", "Neutral"]
+
+# Map the filename strings to dataset IDs
+label_map = {
+    "nue":1,
+    "toad": 2,
+    "dog":3,
+    "gojo": 4,
+    "sukuna": 5
+}
