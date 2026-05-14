@@ -7,6 +7,21 @@ hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2)
 mp_draw = mp.solutions.drawing_utils
 
 #-------------------------------------------------------------------------------
+#label list
+labels = ["neutral", "nue", "toad", "wolf", "gojo", "sukuna"]
+
+# Map the filename strings to dataset IDs
+label_map = {
+    "neutral":0,
+    "nue":1,
+    "toad": 2,
+    "wolf":3,
+    "gojo": 4,
+    "sukuna": 5
+}
+
+#-------------------------------------------------------------------------------
+
 #hand cordinate normalization
 def pre_process_landmark(landmark_list):
     base_x, base_y = landmark_list[0][0], landmark_list[0][1]
@@ -44,14 +59,3 @@ def get_landmarks(frame):
     return all_hands_list, frame
 
 #-------------------------------------------------------------------------------
-#label list(s)
-labels = ["Unlimited Void", "Neutral"]
-
-# Map the filename strings to dataset IDs
-label_map = {
-    "nue":1,
-    "toad": 2,
-    "wolf":3,
-    "gojo": 4,
-    "sukuna": 5
-}

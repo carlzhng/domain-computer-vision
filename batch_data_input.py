@@ -54,7 +54,7 @@ def batch_process_images(folder_path):
             # Process and log data points exactly like your camera loop does
             for hand in landmarks:
                 processed_data = pre_process_landmark(hand)
-                log_csv(current_label_id, processed_data, 'data/fingercords_V2.csv')
+                log_csv(current_label_id, processed_data, 'data/fingercords.csv')
             
             print(f"[{idx+1}/{len(image_files)}] LOGGED: '{filename}' -> Label ID: {current_label_id}")
             success_count += 1
