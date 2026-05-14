@@ -1,14 +1,11 @@
 import os
 import cv2
-from utils.hand_processing import pre_process_landmark, log_csv, get_landmarks
+from utils.hand_processing import pre_process_landmark, log_csv, get_landmarks, label_map
 
 def batch_process_images(folder_path):
+#-------------------------------------------------------------------------------
+#verifcations before processing
 
-    # Map the filename strings to dataset IDs
-    label_map = {
-        "gojo": 0,       # Matches "Unlimited Void"
-        "neutral": 1     # Matches "Neutral"
-    }
     # Verify folder exists
     if not os.path.exists(folder_path):
         print(f"Error: The directory '{folder_path}' does not exist!")
@@ -19,26 +16,27 @@ def batch_process_images(folder_path):
     all_files = os.listdir(folder_path)
     image_files = [f for f in all_files if f.lower().endswith(supported_extensions)]
 
-    print("=" * 60)
+    print("=" * 50)
     print(f"Starting batch extraction on {len(image_files)} images...")
-    print("=" * 60)
+    print("=" * 50)
 
     success_count = 0
     fail_count = 0
+#-------------------------------------------------------------------------------
+#extraction loop
 
+    #extracting corrisponding label based on file name
     for idx, filename in enumerate(image_files):
-        # Determine label based on file name string checking
         filename_lower = filename.lower()
-        current_label_id = None
         
-        for keyword, label_id in label_map.items():
-            if keyword in filename_lower:
-                current_label_id = label_id
-                break
+        # Split file name by underscore and take the first element [0]
+        first_word = filename_lower.split('_')[0]
+        
+        # Direct dictionary lookup to get the label ID
+        current_label_id = label_map.get(first_word)
 
-        # If image does not match any keyword, skip it
         if current_label_id is None:
-            print(f"[{idx+1}/{len(image_files)}] Skipped: '{filename}' (No matching label keyword found)")
+            print(f"[{idx+1}/{len(image_files)}] Skipped: '{filename}' (No match for '{first_word}')")
             continue
 
         # Load the static image
@@ -49,7 +47,7 @@ def batch_process_images(folder_path):
             print(f"[{idx+1}/{len(image_files)}] Error: Could not read image '{filename}'")
             continue
 
-        # Extract landmarks using your custom wrapper
+        # Extract landmarks
         landmarks, _ = get_landmarks(frame)
 
         if landmarks:
@@ -70,7 +68,14 @@ def batch_process_images(folder_path):
     print(f" Failed (MediaPipe missed hand): {fail_count} images")
     print("=" * 60)
 
+#-------------------------------------------------------------------------------
+#main
+
 if __name__ == "__main__":
-    # Create an images directory or reference where you downloaded the dataset
-    IMAGE_DIR = "./downloaded_dataset"
+    IMAGE_DIR = "data/images"
+    
+    # Check if it actually exists to be safe
+    if not os.path.exists(IMAGE_DIR):
+        print(f"I'm at {os.getcwd()}, but I can't find {IMAGE_DIR}")
+    
     batch_process_images(IMAGE_DIR)

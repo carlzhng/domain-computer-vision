@@ -51,7 +51,7 @@ labels = ["Unlimited Void", "Neutral"]
 label_map = {
     "nue":1,
     "toad": 2,
-    "dog":3,
+    "wolf":3,
     "gojo": 4,
     "sukuna": 5
 }
