@@ -1,101 +1,117 @@
-import os
-os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
-os.environ['TF_USE_LEGACY_KERAS'] = '1'
-
-
 import cv2
-import mediapipe as mp
 import csv
+import mediapipe as mp
 from utils.camerafps import CvFpsCalc
 from mediapipe.python.solutions import hands as mp_hands
 from mediapipe.python.solutions import drawing_utils as mp_draw
 from model.fingerClassifier import KeyPointClassifier
 
-hands = mp_hands.Hands(
-    static_image_mode =False,
-    max_num_hands = 1,
-    min_detection_confidence=0.7,
-    min_tracking_confidence=0.5,
-)
-mp_draw = mp.solutions.drawing_utils
+from utils.camerafps import CvFpsCalc
+from utils.hand_processing import pre_process_landmark, log_csv, get_landmarks, labels
 
-def pre_process_landmark(landmark_list):
-    base_x, base_y = landmark_list[0][0], landmark_list[0][1]
-    temp_landmark_list = []
+#-------------------------------------------------------------------------------
+def main():  
+    #capture window setup
+    capture = cv2.VideoCapture(0)
+    capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-    for lp in landmark_list:
-        temp_landmark_list.append(lp[0] - base_x)
-        temp_landmark_list.append(lp[1] - base_y)
-
-    return temp_landmark_list
-
-def logging_csv(label, landmark_list):
-    with open('data/fingerCoords.csv', 'a', newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([label, *landmark_list])
-
-def get_landmarks(frame):
-    img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = hands.process(img_rgb)
-    all_hands_list = []
-
-    if results.multi_hand_landmarks:
-        for hand_landmarks in results.multi_hand_landmarks:
-            current_hand_points = []
-            for lm in hand_landmarks.landmark:
-                current_hand_points.append([lm.x, lm.y, lm.z])
-
-            all_hands_list.append(current_hand_points)
-            mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-
-    return all_hands_list, frame
-
-def main():
-    cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+    #fps calculator setup
     cv_fps_calc = CvFpsCalc(buffer_len=10)
 
+    #hands setup
+    hands = mp_hands.Hands(
+        static_image_mode=False,
+        max_num_hands=2,
+        min_detection_confidence=0.7,
+        min_tracking_confidence=0.5,
+    )
+
+    #intialize classifier and labels
     keypoint_classifier = KeyPointClassifier()
-    labels = ["Unlimited Void", "Neutral"]
+    current_label = 0
 
+    #basic instructions
+    print("\n"+ "=" * 10 + "< Hand Sign Data Collection >" + "=" * 10)
+    print("INSTRUCTIONS:")
+    print("Press 'q' to quit the program.")
+    print("Press 'n' to cycle forward through labels.")
+    print("Press 'b' to cycle backward through labels.")
+    print("Press 's' to save the current hand coordinates with the selected label.")
+    print("="*49+"\n")
+#-------------------------------------------------------------------------------
+    #main camera loop
     while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    #basic frame capture and flip
+        captured,frame = capture.read()
 
+        if not captured:
+            print("frame grabbing failed lol")
+            break
         frame = cv2.flip(frame, 1)
 
+    #hand landmark processing
         landmarks, frame = get_landmarks(frame)
-
         if landmarks:
             for hand in landmarks:
-                processed_hand = pre_process_landmark(hand)
-                hand_sign_id = keypoint_classifier(processed_hand)
-                sign_name = labels[hand_sign_id]
-
+                rel_hand_cords = pre_process_landmark(hand)
                 wrist_x = int(hand[0][0] * frame.shape[1])
                 wrist_y = int(hand[0][1] * frame.shape[0])
 
-                cv2.putText(frame, sign_name, (wrist_x, wrist_y -20), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 255), 2)
+                #identifying hand sign
+                hand_sign_id = keypoint_classifier(rel_hand_cords)
+                sign_name = labels[hand_sign_id]
 
+                cv2.putText(frame, sign_name, (wrist_x, wrist_y - 20), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 255), 2)
+                
+    #framerate display
         fps = cv_fps_calc.get()
-        cv2.putText(frame, f"FPS: {fps}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2, cv2.LINE_AA)
-        cv2.imshow('Domain Expansion Detector!', frame)
-
+        cv2.putText(frame, f"FPS: {fps}", (10, 30), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2, cv2.LINE_AA)
+    
+        #point logging and program termination
+        cv2.putText(frame, 
+                    f"RECORDING MODE: {current_label} ({labels[current_label] if current_label < len(labels) else 'Unknown'})", 
+                    (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0))
+        
+        #show frame
+        cv2.imshow('camera', frame)
+            
         key = cv2.waitKey(1) & 0xFF
-        if key == ord('k'):
+
+        # 1. Quit Program
+        if key == ord('q'):
+            break
+        elif key == ord('n'):
+            current_label += 1
+            if current_label >= len(labels):
+                current_label = 0 # Loop back to the start
+            
+            print(f"ID: {current_label} | Selected Sign: {labels[current_label]}")
+
+        # Toggle Label DOWN (Press 'b')
+        elif key == ord('b'):
+            current_label -= 1
+            if current_label < 0:
+                current_label = len(labels) - 1 # Loop to the end
+            print(f"ID: {current_label} | Selected Sign: {labels[current_label]}")
+
+        # Save Data (Press 's')
+        elif key == ord('s'):
             if landmarks:
                 for hand in landmarks:
                     processed_data = pre_process_landmark(hand)
-                    logging_csv(1, processed_data)
-                    print("Logged Neutral data point")
+                    log_csv(current_label, processed_data, 'data/fingerCoords.csv')
+                
+                # Detailed print statement
+                print(f"LOGGED: ID {current_label} | Sign: {labels[current_label]}")
             else:
-                print("No hand in frame to record")
-        
-        if key == ord('q'):
-            break
-
-    cap.release()
+                print("No hand in frame to record!")
+#-------------------------------------------------------------------------------
+    #destructor
+    capture.release()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
