@@ -19,7 +19,6 @@ label_map = {
     "gojo": 4,
     "sukuna": 5
 }
-
 #-------------------------------------------------------------------------------
 
 #hand cordinate normalization
@@ -41,20 +40,24 @@ def log_csv(label, landmark_list, filename):
         writer.writerow([label, *landmark_list])
 
 #-------------------------------------------------------------------------------
-#function to overlay hand landmarks on the video feed
+
 def get_landmarks(frame):
     img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = hands.process(img_rgb)
     all_hands_list = []
 
     if results.multi_hand_landmarks:
+        # Collect hands
         for hand_landmarks in results.multi_hand_landmarks:
             current_hand_points = []
             for lm in hand_landmarks.landmark:
                 current_hand_points.append([lm.x, lm.y, lm.z])
-
             all_hands_list.append(current_hand_points)
             mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+        # 2. SORT hands by X-coordinate (Left to Right)
+        # This ensures Hand 0 is always the one further to the left on screen
+        all_hands_list.sort(key=lambda x: x[0][0]) 
 
     return all_hands_list, frame
 

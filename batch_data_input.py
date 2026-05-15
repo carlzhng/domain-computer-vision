@@ -51,13 +51,32 @@ def batch_process_images(folder_path):
         landmarks, _ = get_landmarks(frame)
 
         if landmarks:
-            # Process and log data points exactly like your camera loop does
-            for hand in landmarks:
-                processed_data = pre_process_landmark(hand)
-                log_csv(current_label_id, processed_data, 'data/fingercords.csv')
+            # Create a master list of 84 zeros
+            dual_hand_data = [0.0] * 84 
+
+            if len(landmarks) >= 2:
+                # Fill both slots (Hand 0 is left-most because of our sort in get_landmarks)
+                dual_hand_data[0:42] = pre_process_landmark(landmarks[0])
+                dual_hand_data[42:84] = pre_process_landmark(landmarks[1])
+                status = "2 Hands"
+            else:
+                # Single hand logic: Decide slot based on X coordinate
+                processed = pre_process_landmark(landmarks[0])
+                wrist_x = landmarks[0][0][0]
+                
+                if wrist_x < 0.5:
+                    dual_hand_data[0:42] = processed
+                    status = "1 Hand (Left)"
+                else:
+                    dual_hand_data[42:84] = processed
+                    status = "1 Hand (Right)"
+
+            # LOG ONCE per image (84 points total)
+            log_csv(current_label_id, dual_hand_data, 'data/fingercords.csv')
             
-            print(f"[{idx+1}/{len(image_files)}] LOGGED: '{filename}' -> Label ID: {current_label_id}")
+            print(f"[{idx+1}/{len(image_files)}] LOGGED ({status}): '{filename}' -> ID: {current_label_id}")
             success_count += 1
+
         else:
             print(f"[{idx+1}/{len(image_files)}] FAILED: No hands detected in '{filename}'")
             fail_count += 1

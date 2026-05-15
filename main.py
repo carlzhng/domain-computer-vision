@@ -53,19 +53,31 @@ def main():
 
     #hand landmark processing
         landmarks, frame = get_landmarks(frame)
+        dual_hand_data = [0] * 84 
+
         if landmarks:
-            for hand in landmarks:
-                rel_hand_cords = pre_process_landmark(hand)
-                wrist_x = int(hand[0][0] * frame.shape[1])
-                wrist_y = int(hand[0][1] * frame.shape[0])
-
-                #identifying hand sign
-                hand_sign_id = keypoint_classifier(rel_hand_cords)
-                sign_name = labels[hand_sign_id]
-
-                cv2.putText(frame, sign_name, (wrist_x, wrist_y - 20), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 255), 2)
+            if len(landmarks) == 2:
+                # Fill both slots
+                dual_hand_data[0:42] = pre_process_landmark(landmarks[0])
+                dual_hand_data[42:84] = pre_process_landmark(landmarks[1])
+            else:
+                # Only one hand: Decide if it's the "Left" or "Right" slot based on X position
+                wrist_x = landmarks[0][0][0]
+                processed = pre_process_landmark(landmarks[0])
                 
+                if wrist_x < 0.5:
+                    dual_hand_data[0:42] = processed  # Put in Left slot
+                else:
+                    dual_hand_data[42:84] = processed # Put in Right slot
+
+            hand_sign_id = keypoint_classifier(dual_hand_data)
+            sign_name = labels[hand_sign_id]
+
+            wrist_x = int(landmarks[0][0][0] * frame.shape[1])
+            wrist_y = int(landmarks[0][0][1] * frame.shape[0])
+            cv2.putText(frame, sign_name, (wrist_x, wrist_y - 20), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 255), 2)
+            
     #framerate display
         fps = cv_fps_calc.get()
         cv2.putText(frame, f"FPS: {fps}", (10, 30), 
@@ -100,15 +112,12 @@ def main():
 
         # Save Data (Press 's')
         elif key == ord('s'):
-            if landmarks:
-                for hand in landmarks:
-                    processed_data = pre_process_landmark(hand)
-                    log_csv(current_label, processed_data, 'data/fingerCoords.csv')
-                
-                # Detailed print statement
-                print(f"LOGGED: ID {current_label} | Sign: {labels[current_label]}")
-            else:
-                print("No hand in frame to record!")
+                if landmarks:
+                    # SAVE THE 84-POINT DATA, NOT INDIVIDUAL HANDS
+                    log_csv(current_label, dual_hand_data, 'data/fingercords.csv')
+                    print(f"LOGGED 84 POINTS: ID {current_label} | Sign: {labels[current_label]}")
+                else:
+                    print("No hand in frame to record!")
 #-------------------------------------------------------------------------------
     #destructor
     capture.release()
