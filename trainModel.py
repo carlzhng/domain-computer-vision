@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from utils.hand_processing import labels
 
 # 1. Load Data
-csv_path = '/fingercords.csv' 
+csv_path = 'data/fingercords.csv' 
 
 print(f"Loading data from {csv_path}...")
 df = pd.read_csv(csv_path, header=None)
