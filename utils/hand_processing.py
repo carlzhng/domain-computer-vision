@@ -8,7 +8,7 @@ mp_draw = mp.solutions.drawing_utils
 
 #-------------------------------------------------------------------------------
 #label list
-labels = ["neutral", "nue", "toad", "wolf", "gojo", "sukuna"]
+labels = ["neutral", "nue", "toad", "divine dog", "infinite void", "malevolent shrine"]
 
 # Map the filename strings to dataset IDs
 label_map = {
