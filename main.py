@@ -3,23 +3,28 @@ import csv
 import mediapipe as mp
 import time
 import os
-from utils.camerafps import CvFpsCalc
-
-from mediapipe.python.solutions import hands as mp_hands
-from mediapipe.python.solutions import drawing_utils as mp_draw
-from model.fingerClassifier import KeyPointClassifier
-
-from utils.camerafps import CvFpsCalc
-from utils.hand_processing import pre_process_landmark, log_csv, get_landmarks, labels
-
 import subprocess
 import threading 
 
+from utils.camerafps import CvFpsCalc
+from mediapipe.python.solutions import hands as mp_hands
+from mediapipe.python.solutions import drawing_utils as mp_draw
+from model.fingerClassifier import KeyPointClassifier
+from utils.camerafps import CvFpsCalc
+from utils.hand_processing import pre_process_landmark, log_csv, get_landmarks, labels
+
+
+ps_process = subprocess.Popen(
+    ['powershell.exe', '-NoExit', '-Command', '-'],
+    stdin=subprocess.PIPE,
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL
+)
+
 def press_key(key):
-    subprocess.run([
-        'powershell.exe', '-Command',
-        f'Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait("{key}")'
-    ])
+    cmd = f'Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait("{key}")\n'
+    ps_process.stdin.write(cmd.encode())
+    ps_process.stdin.flush()
 
 #-------------------------------------------------------------------------------
 def main():  
@@ -46,13 +51,14 @@ def main():
     COOLDOWN = 0.1
     last_press_time = 0
 
+
     #basic instructions
     print("\n"+ "=" * 10 + "< Hand Sign Data Collection >" + "=" * 10)
     print("INSTRUCTIONS:")
-    print("Press 'q' to quit the program.")
+    print("Press 'p' to quit the program.")
     print("Press 'n' to cycle forward through labels.")
     print("Press 'b' to cycle backward through labels.")
-    print("Press 's' to save the current hand coordinates with the selected label.")
+    print("Press 'l' to save the current hand coordinates with the selected label.")
     print("="*49+"\n")
 #-------------------------------------------------------------------------------
     #main camera loop
@@ -113,7 +119,7 @@ def main():
         key = cv2.waitKey(1) & 0xFF
 
         # 1. Quit Program
-        if key == ord('q'):
+        if key == ord('p'):
             break
         elif key == ord('n'):
             current_label += 1
@@ -129,8 +135,8 @@ def main():
                 current_label = len(labels) - 1 # Loop to the end
             print(f"ID: {current_label} | Selected Sign: {labels[current_label]}")
 
-        # Save Data (Press 's')
-        elif key == ord('s'):
+        # Save Data (Press 'l')
+        elif key == ord('l'):
                 if landmarks:
                     # SAVE THE 84-POINT DATA, NOT INDIVIDUAL HANDS
                     log_csv(current_label, dual_hand_data, 'data/fingercords.csv')
@@ -140,6 +146,8 @@ def main():
 
 #-------------------------------------------------------------------------------
     #destructor
+    ps_process.stdin.close()
+    ps_process.terminate()
     capture.release()
     cv2.destroyAllWindows()
     os.system('stty sane')
