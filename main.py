@@ -1,13 +1,25 @@
 import cv2
 import csv
 import mediapipe as mp
+import time
+import os
 from utils.camerafps import CvFpsCalc
+
 from mediapipe.python.solutions import hands as mp_hands
 from mediapipe.python.solutions import drawing_utils as mp_draw
 from model.fingerClassifier import KeyPointClassifier
 
 from utils.camerafps import CvFpsCalc
 from utils.hand_processing import pre_process_landmark, log_csv, get_landmarks, labels
+
+import subprocess
+import threading 
+
+def press_key(key):
+    subprocess.run([
+        'powershell.exe', '-Command',
+        f'Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait("{key}")'
+    ])
 
 #-------------------------------------------------------------------------------
 def main():  
@@ -31,6 +43,8 @@ def main():
     #intialize classifier and labels
     keypoint_classifier = KeyPointClassifier()
     current_label = 0
+    COOLDOWN = 0.1
+    last_press_time = 0
 
     #basic instructions
     print("\n"+ "=" * 10 + "< Hand Sign Data Collection >" + "=" * 10)
@@ -77,6 +91,11 @@ def main():
             wrist_y = int(landmarks[0][0][1] * frame.shape[0])
             cv2.putText(frame, sign_name, (wrist_x, wrist_y - 20), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 255), 2)
+            if sign_name != "neutral":
+                now = time.time()
+                if now - last_press_time > COOLDOWN:
+                    threading.Thread(target=press_key, args=('g',), daemon=True).start()
+                    last_press_time = now
             
     #framerate display
         fps = cv_fps_calc.get()
@@ -118,10 +137,12 @@ def main():
                     print(f"LOGGED 84 POINTS: ID {current_label} | Sign: {labels[current_label]}")
                 else:
                     print("No hand in frame to record!")
+
 #-------------------------------------------------------------------------------
     #destructor
     capture.release()
     cv2.destroyAllWindows()
+    os.system('stty sane')
 
 if __name__ == "__main__":
     main()
