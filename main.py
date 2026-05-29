@@ -5,6 +5,7 @@ import time
 import os
 import subprocess
 import threading 
+import ctypes
 
 from utils.camerafps import CvFpsCalc
 from mediapipe.python.solutions import hands as mp_hands
@@ -48,6 +49,7 @@ def main():
     #intialize classifier and labels
     keypoint_classifier = KeyPointClassifier()
     current_label = 0
+    auto_press_mode = False
     COOLDOWN = 0.1
     last_press_time = 0
 
@@ -59,6 +61,8 @@ def main():
     print("Press 'n' to cycle forward through labels.")
     print("Press 'b' to cycle backward through labels.")
     print("Press 'l' to save the current hand coordinates with the selected label.")
+    print("Press 'm' to toggle mode between data collection and gaming.")
+    print("In GAMER mode, a non-neutral hand sign triggers the 'g' key.")
     print("="*49+"\n")
 #-------------------------------------------------------------------------------
     #main camera loop
@@ -97,11 +101,30 @@ def main():
             wrist_y = int(landmarks[0][0][1] * frame.shape[0])
             cv2.putText(frame, sign_name, (wrist_x, wrist_y - 20), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 255), 2)
-            if sign_name != "neutral":
-                now = time.time()
-                if now - last_press_time > COOLDOWN:
-                    threading.Thread(target=press_key, args=('g',), daemon=True).start()
-                    last_press_time = now
+            if auto_press_mode:
+                if sign_name == "infinite void" or sign_name == "malevolent shrine":
+                    now = time.time()
+                    if now - last_press_time > COOLDOWN:
+                        threading.Thread(target=press_key, args=('4',), daemon=True).start()
+                        last_press_time = now
+                if sign_name == "nue":
+                    now = time.time()
+                    if now - last_press_time > COOLDOWN:
+                        threading.Thread(target=press_key, args=('2',), daemon=True).start()
+                        last_press_time = now
+                if sign_name == "toad":
+                    now = time.time()
+                    if now - last_press_time > COOLDOWN:
+                        threading.Thread(target=press_key, args=('3',), daemon=True).start()
+                        last_press_time = now
+                if sign_name == "divine dog":
+                    now = time.time()
+                    if now - last_press_time > COOLDOWN:
+                        threading.Thread(target=press_key, args=('4',), daemon=True).start()
+                        last_press_time = now
+                else:
+                    print("Neutral sign detected, no key press triggered.")
+
             
     #framerate display
         fps = cv_fps_calc.get()
@@ -109,8 +132,9 @@ def main():
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2, cv2.LINE_AA)
     
         #point logging and program termination
+        mode_text = 'GAMER MODE' if auto_press_mode else 'DATA MODE'
         cv2.putText(frame, 
-                    f"RECORDING MODE: {current_label} ({labels[current_label] if current_label < len(labels) else 'Unknown'})", 
+                    f"MODE: {mode_text} | LABEL: {current_label} ({labels[current_label] if current_label < len(labels) else 'Unknown'})", 
                     (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0))
         
         #show frame
@@ -134,6 +158,11 @@ def main():
             if current_label < 0:
                 current_label = len(labels) - 1 # Loop to the end
             print(f"ID: {current_label} | Selected Sign: {labels[current_label]}")
+
+        # Toggle auto-press / collection mode (Press 'm')
+        elif key == ord('m'):
+            auto_press_mode = not auto_press_mode
+            print(f"MODE: {'GAMER MODE' if auto_press_mode else 'DATA MODE'}")
 
         # Save Data (Press 'l')
         elif key == ord('l'):
