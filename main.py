@@ -5,6 +5,7 @@ import time
 import os
 import subprocess
 import threading 
+import ctypes
 
 from utils.camerafps import CvFpsCalc
 from mediapipe.python.solutions import hands as mp_hands
@@ -100,11 +101,30 @@ def main():
             wrist_y = int(landmarks[0][0][1] * frame.shape[0])
             cv2.putText(frame, sign_name, (wrist_x, wrist_y - 20), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 255), 2)
-            if auto_press_mode and sign_name != "neutral":
-                now = time.time()
-                if now - last_press_time > COOLDOWN:
-                    threading.Thread(target=press_key, args=('g',), daemon=True).start()
-                    last_press_time = now
+            if auto_press_mode:
+                if sign_name == "infinite void" or sign_name == "malevolent shrine":
+                    now = time.time()
+                    if now - last_press_time > COOLDOWN:
+                        threading.Thread(target=press_key, args=('4',), daemon=True).start()
+                        last_press_time = now
+                if sign_name == "nue":
+                    now = time.time()
+                    if now - last_press_time > COOLDOWN:
+                        threading.Thread(target=press_key, args=('2',), daemon=True).start()
+                        last_press_time = now
+                if sign_name == "toad":
+                    now = time.time()
+                    if now - last_press_time > COOLDOWN:
+                        threading.Thread(target=press_key, args=('3',), daemon=True).start()
+                        last_press_time = now
+                if sign_name == "divine dog":
+                    now = time.time()
+                    if now - last_press_time > COOLDOWN:
+                        threading.Thread(target=press_key, args=('4',), daemon=True).start()
+                        last_press_time = now
+                else:
+                    print("Neutral sign detected, no key press triggered.")
+
             
     #framerate display
         fps = cv_fps_calc.get()
