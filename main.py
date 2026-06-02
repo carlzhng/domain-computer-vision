@@ -3,9 +3,8 @@ import csv
 import mediapipe as mp
 import time
 import os
-import subprocess
-import threading 
-import ctypes
+
+import pydirectinput
 
 from utils.camerafps import CvFpsCalc
 from mediapipe.python.solutions import hands as mp_hands
@@ -14,18 +13,15 @@ from model.fingerClassifier import KeyPointClassifier
 from utils.camerafps import CvFpsCalc
 from utils.hand_processing import pre_process_landmark, log_csv, get_landmarks, labels
 
+#-------------------------------------------------------------------------------
 
-ps_process = subprocess.Popen(
-    ['powershell.exe', '-NoExit', '-Command', '-'],
-    stdin=subprocess.PIPE,
-    stdout=subprocess.DEVNULL,
-    stderr=subprocess.DEVNULL
-)
-
-def press_key(key):
-    cmd = f'Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait("{key}")\n'
-    ps_process.stdin.write(cmd.encode())
-    ps_process.stdin.flush()
+key_mapping = {
+    "infinite void": 'g',
+    "malevolent shrine": 'g',
+    "nue": '2',
+    "toad": '3',
+    "divine dog": '4'
+}
 
 #-------------------------------------------------------------------------------
 def main():  
@@ -79,6 +75,7 @@ def main():
         landmarks, frame = get_landmarks(frame)
         dual_hand_data = [0] * 84 
 
+        sign_name = "neutral"
         if landmarks:
             if len(landmarks) == 2:
                 # Fill both slots
@@ -101,30 +98,16 @@ def main():
             wrist_y = int(landmarks[0][0][1] * frame.shape[0])
             cv2.putText(frame, sign_name, (wrist_x, wrist_y - 20), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 255), 2)
+
             if auto_press_mode:
-                if sign_name == "infinite void" or sign_name == "malevolent shrine":
+                if sign_name in key_mapping:
                     now = time.time()
                     if now - last_press_time > COOLDOWN:
-                        threading.Thread(target=press_key, args=('4',), daemon=True).start()
-                        last_press_time = now
-                if sign_name == "nue":
-                    now = time.time()
-                    if now - last_press_time > COOLDOWN:
-                        threading.Thread(target=press_key, args=('2',), daemon=True).start()
-                        last_press_time = now
-                if sign_name == "toad":
-                    now = time.time()
-                    if now - last_press_time > COOLDOWN:
-                        threading.Thread(target=press_key, args=('3',), daemon=True).start()
-                        last_press_time = now
-                if sign_name == "divine dog":
-                    now = time.time()
-                    if now - last_press_time > COOLDOWN:
-                        threading.Thread(target=press_key, args=('4',), daemon=True).start()
+                        pydirectinput.press(key_mapping[sign_name])
                         last_press_time = now
                 else:
-                    print("Neutral sign detected, no key press triggered.")
-
+                    # If no landmarks are detected, reset the sign name so it doesn't spam
+                    print(f"Sign '{sign_name}' detected, but no key mapped.")
             
     #framerate display
         fps = cv_fps_calc.get()
@@ -175,11 +158,8 @@ def main():
 
 #-------------------------------------------------------------------------------
     #destructor
-    ps_process.stdin.close()
-    ps_process.terminate()
     capture.release()
     cv2.destroyAllWindows()
-    os.system('stty sane')
 
 if __name__ == "__main__":
     main()
